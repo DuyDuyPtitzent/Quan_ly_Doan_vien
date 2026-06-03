@@ -1,5 +1,61 @@
 # Tree Trang Và Trường Thông Tin Chính Theo Vai Trò
 
+## 0. Quy Định Cách Chia Tầng
+
+Tài liệu này dùng cách chia tầng để cấu trúc backend và danh mục màn hình dễ hiểu, dễ bảo trì và dễ nâng cấp. Mỗi tầng có trách nhiệm riêng, không trộn vai trò với nhau.
+
+### `presentation`
+Tầng nhận request từ frontend và trả response về.
+
+Tầng này thường làm:
+
+- Nhận dữ liệu từ API.
+- Kiểm tra định dạng ban đầu.
+- Gọi sang tầng xử lý nghiệp vụ.
+- Trả kết quả về client.
+
+### `application`
+Tầng này điều phối nghiệp vụ:
+
+- Kiểm tra quyền.
+- Gọi repository lấy dữ liệu.
+- Gọi domain xử lý luật.
+- Lưu kết quả.
+- Gửi thông báo nếu cần.
+
+### `domain`
+Là tầng chứa luật nghiệp vụ cốt lõi, không phụ thuộc database, không phụ thuộc HTTP.
+
+Tầng này thường chứa:
+
+- Entity.
+- Luật nghiệp vụ.
+- Policy kiểm tra ai được làm gì.
+- Interface repository.
+
+### `infrastructure`
+Tầng này làm việc với công nghệ cụ thể:
+
+- Prisma.
+- PostgreSQL.
+- Redis.
+- MinIO.
+- Email.
+- Queue.
+
+Nguyên tắc:
+
+- Nếu đổi database thì chỉ đổi ở `infrastructure`.
+- Không phá vỡ luật nghiệp vụ ở `domain`.
+- Không nhét logic nghiệp vụ vào controller.
+
+## 0.1 Quy Định Về Tên Gọi
+
+- Tên thư mục/module/file chức năng dùng tiếng Việt không dấu.
+- Ghi chú sau từng thư mục/file dùng tiếng Việt rõ ràng.
+- Không dùng nửa Anh nửa Việt trong phần diễn giải tầng.
+- Backend có thể cấu trúc theo cây, nhưng quyền truy cập vẫn phải kiểm tra ở API.
+
 Ghi chú:
 
 - Nhánh `Chung cho mọi tài khoản` là dữ liệu của chính người đang đăng nhập.
