@@ -119,20 +119,25 @@ backend/                                             # Toàn bộ backend của 
 │   │   │       ├── doi-mat-khau.dto.ts               # DTO đổi mật khẩu
 │   │   │       └── loc-nguoi-dung.dto.ts             # DTO lọc danh sách người dùng
 │   │   │
-│   │   ├── phan-quyen/                               # Vai trò, quyền và phạm vi
+│   │   ├── phan-quyen/                               # Vai trò, quyền, phạm vi và phân công nhiều vai trò
 │   │   │   ├── phan-quyen.module.ts                  # Module phân quyền
-│   │   │   ├── phan-quyen.controller.ts              # API cấp quyền và thu hồi quyền
-│   │   │   ├── phan-quyen.service.ts                 # Điều phối logic phân quyền
+│   │   │   ├── phan-quyen.controller.ts              # API cấp quyền, thu hồi quyền, lấy quyền hiện tại
+│   │   │   ├── phan-quyen.service.ts                 # Điều phối logic phân quyền chung
+│   │   │   ├── phan-cong-vai-tro.service.ts          # Xử lý một người có nhiều vai trò theo từng phạm vi
+│   │   │   ├── quyen-hien-tai.service.ts             # Tính quyền hiện tại sau đăng nhập để frontend biết người dùng có vai trò nào
 │   │   │   ├── domain/                               # Luật nghiệp vụ phân quyền
 │   │   │   │   ├── vai-tro.enum.ts                   # Danh sách vai trò chuẩn
 │   │   │   │   ├── quyen.enum.ts                     # Danh sách quyền chuẩn
 │   │   │   │   ├── pham-vi.enum.ts                   # Danh sách phạm vi chuẩn
-│   │   │   │   ├── phan-quyen.policy.ts              # Luật kiểm tra ai được làm gì
+│   │   │   │   ├── phan-cong-vai-tro.entity.ts       # Mô hình user + vai trò + phạm vi + thời hạn + quyết định
+│   │   │   │   ├── phan-quyen.policy.ts              # Luật kiểm tra ai được làm hành động nào trong phạm vi nào
+│   │   │   │   ├── tong-hop-quyen.policy.ts          # Gộp quyền từ nhiều vai trò đang còn hiệu lực
 │   │   │   │   └── vai-tro-nguoi-dung.repository.ts  # Interface lấy và lưu vai trò người dùng
-│   │   │   └── dto/                                  # Dữ liệu đầu vào của phân quyền
+│   │   │   └── dto/                                  # Dữ liệu đầu vào/đầu ra của phân quyền
 │   │   │       ├── gan-vai-tro.dto.ts                # DTO gán vai trò
 │   │   │       ├── thu-hoi-vai-tro.dto.ts            # DTO thu hồi vai trò
-│   │   │       └── cap-nhat-pham-vi.dto.ts           # DTO cập nhật phạm vi
+│   │   │       ├── cap-nhat-pham-vi.dto.ts           # DTO cập nhật phạm vi
+│   │   │       └── quyen-hien-tai.dto.ts             # DTO trả về danh sách vai trò/quyền/phạm vi hiện tại cho frontend
 │   │   │
 │   │   ├── to-chuc/                                  # Cây tổ chức: trường, khoa, lớp, chi đoàn, liên chi
 │   │   │   ├── to-chuc.module.ts                     # Module tổ chức
@@ -296,3 +301,64 @@ backend/                                             # Toàn bộ backend của 
 - `modules/phan-quyen` là module quan trọng nhất để chặn lọt scope giữa các đơn vị.
 - Mỗi module nghiệp vụ nên có `controller`, `service`, `domain`, `dto` để dễ chia việc và dễ bảo trì.
 - Nếu thay cơ sở dữ liệu hoặc storage, ưu tiên sửa ở `infrastructure` trước, không sửa lan sang toàn bộ module.
+
+
+## 5. Bổ Sung Phần Một Người Có Nhiều Vai Trò
+
+Phần này xử lý ở module:
+
+```text
+backend/src/modules/phan-quyen/
+```
+
+Khi một người vừa là Bí thư Chi đoàn, vừa là Phó Bí thư Đoàn Học viện, hệ thống không tạo tài khoản mới và không ép người đó chỉ dùng một vai trò. Hệ thống lưu nhiều dòng phân công vai trò cho cùng một người dùng.
+
+Các file cần có trong cây backend:
+
+```text
+backend/src/modules/phan-quyen/                         # Module quản lý vai trò, quyền và phạm vi
+├── phan-quyen.module.ts                                # Gom toàn bộ xử lý phân quyền
+├── phan-quyen.controller.ts                            # API gán vai trò, thu hồi vai trò, lấy quyền hiện tại
+├── phan-quyen.service.ts                               # Điều phối nghiệp vụ phân quyền
+├── phan-cong-vai-tro.service.ts                        # Xử lý một người có nhiều vai trò theo từng phạm vi
+├── quyen-hien-tai.service.ts                           # Tính tổng quyền hợp lệ của người dùng sau khi đăng nhập
+├── domain/                                             # Luật nghiệp vụ phân quyền
+│   ├── vai-tro.enum.ts                                 # Danh sách vai trò chuẩn
+│   ├── quyen.enum.ts                                   # Danh sách quyền chuẩn
+│   ├── pham-vi.enum.ts                                 # Danh sách phạm vi: bản thân, chi đoàn, liên chi, học viện, hệ thống
+│   ├── phan-cong-vai-tro.entity.ts                     # Mô hình user + vai trò + phạm vi + thời hạn + quyết định
+│   ├── phan-quyen.policy.ts                            # Kiểm tra người dùng có quyền làm hành động trong phạm vi đó không
+│   ├── tong-hop-quyen.policy.ts                        # Gộp quyền từ nhiều vai trò đang còn hiệu lực
+│   └── vai-tro-nguoi-dung.repository.ts                # Interface lấy/lưu vai trò người dùng
+└── dto/                                                # Dữ liệu đầu vào/đầu ra của phân quyền
+    ├── gan-vai-tro.dto.ts                              # Dữ liệu gán vai trò cho người dùng
+    ├── thu-hoi-vai-tro.dto.ts                          # Dữ liệu thu hồi vai trò
+    ├── cap-nhat-pham-vi.dto.ts                         # Dữ liệu cập nhật phạm vi vai trò
+    └── quyen-hien-tai.dto.ts                           # Dữ liệu trả về danh sách vai trò/quyền hiện tại sau đăng nhập
+```
+
+Luồng xử lý:
+
+1. Người dùng đăng nhập.
+2. Backend lấy tất cả phân công vai trò còn hiệu lực của người đó.
+3. `quyen-hien-tai.service.ts` trả về danh sách vai trò, quyền và phạm vi cho frontend.
+4. Khi người dùng thao tác, API gửi hành động và phạm vi cần xử lý.
+5. `phan-quyen.policy.ts` kiểm tra có vai trò nào của người đó có đúng quyền và đúng phạm vi không.
+6. Nếu có thì cho thao tác, nếu không thì trả lỗi 403.
+
+Ví dụ:
+
+```text
+Người A có 2 phân công:
+- Bí thư Chi đoàn, phạm vi Chi đoàn D21CQCN01-B
+- Phó Bí thư Đoàn Học viện, phạm vi Học viện PTIT
+
+A tạo sự kiện cho D21CQCN01-B
+→ dùng quyền Bí thư Chi đoàn.
+
+A cấu hình tiêu chí cấp Học viện
+→ dùng quyền Phó Bí thư Đoàn Học viện.
+
+A tạo sự kiện cho Chi đoàn khác
+→ không được, vì sai phạm vi.
+```
